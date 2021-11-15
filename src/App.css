@@ -1,0 +1,16 @@
+#canvas {
+  background-color: #38b5db;
+  border-radius: 20px;
+}
+
+.joystick{
+  float: right;
+}
+
+.hotBombPotato{
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  
+  width: 360px;
+}
