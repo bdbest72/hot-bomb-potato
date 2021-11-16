@@ -25,6 +25,7 @@ interface IJoystickUpdateEvent {
   direction: JoystickDirection | null;
 }
 
+//============배열을 설정해서 여러 ball값을 출력하려고 했던 코드인데 제대로 작동하지 않아서 주석처리함. 불필요하면 삭제해도 됨==========
 // var balls = [];
 // var ballMap = {};
 
@@ -51,16 +52,22 @@ interface IJoystickUpdateEvent {
 const gameData = {
   x: 100,
   y: 100,
+  color: '',
   moveX: 0,
   moveY: 0,
   state: "stop",
   ballRad: 20,
 }
 
+//서버에서 socket.emit('join_user', ...)로 보낸 정보들을 아래 코드에서 받아서 적용해야함
 socket.on('join_user', function(data){
   gameData.x = data.x;
   gameData.y = data.y;
+  gameData.color = data.color;
 })
+
+//여기까지가 초기 상태값 설정
+//이제부터 각각의 움직임이 발생하는 모든 부분(데이터가 변경되어야 하는 부분)을 서버로 이동량을 보내줘야 함
 
 
 const handleMove = (event: IJoystickUpdateEvent) => {
@@ -81,7 +88,7 @@ const handleStop = (event: IJoystickUpdateEvent) => {
 function drawCircle(ctx: any) {
   ctx.beginPath();
   ctx.arc(gameData.x, gameData.y, gameData.ballRad, 0, 2 * Math.PI);
-  ctx.fillStyle = "red";
+  ctx.fillStyle = gameData.color;
   ctx.fill();
   ctx.stroke();
 }
