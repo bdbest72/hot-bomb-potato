@@ -2,8 +2,10 @@ import React, { useEffect, useRef } from 'react';
 import './App.css';
 import { Joystick } from 'react-joystick-component';
 import isWallCollision from './isWallCollision';
+import io from 'socket.io-client'
 
 //Note: 현재 픽셀 위치 설정은 canvas 500x500을 기준으로 맞춰져있습니다.
+const socket = io('http://localhost:3000');
 
 const CanvasWidth = 360;
 const CanvasHeight = 500;
@@ -23,6 +25,29 @@ interface IJoystickUpdateEvent {
   direction: JoystickDirection | null;
 }
 
+// var balls = [];
+// var ballMap = {};
+
+// function PlayerBall(id){
+//   this.id = id;
+//   this.color = "#FF00FF";
+//   this.x = 1024/2;
+//   this.y = 768/2;
+// }
+
+// socket.on('join_user', data => {
+//   let ball = new PlayerBall(data.id);
+//   ball.color = data.color;
+//   ball.x = data.x;
+//   ball.y = data.y;
+
+//   balls.push(ball);
+//   ballMap[data.id] = ball;
+
+//   gameData.x = balls[0].x;
+//   gameData.y = balls[0].y;
+// });
+
 const gameData = {
   x: 100,
   y: 100,
@@ -31,6 +56,12 @@ const gameData = {
   state: "stop",
   ballRad: 20,
 }
+
+socket.on('join_user', function(data){
+  gameData.x = data.x;
+  gameData.y = data.y;
+})
+
 
 const handleMove = (event: IJoystickUpdateEvent) => {
   const x: number | null = event.x;
