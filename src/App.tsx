@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import './App.css';
 import { Joystick } from 'react-joystick-component';
-import isWallCollision from './isWallCollision';
 import io from 'socket.io-client'
 
 
@@ -54,6 +53,12 @@ type playerBallType = {
   y: number;
 }
 
+type dataToServer = {
+  id: string;
+  x: number;
+  y: number;
+}
+
 /* ================== 게임 정보 관련 시작 ================== */
 //Note: 현재 픽셀 위치 설정은 canvas 360x500을 기준으로 맞춰져있습니다.
 const CanvasWidth = 360;
@@ -73,6 +78,7 @@ const joystickData = {
 }
 
 function joinUser(id: string, color: string, x: number, y: number){
+  console.log("join user");
   let ball = new playerBall();
   ball.id = id;
   ball.color = color;
@@ -83,6 +89,16 @@ function joinUser(id: string, color: string, x: number, y: number){
   ballMap[id] = ball;
 
   return ball;
+}
+
+function leaveUser(id: string){
+  for(var i = 0 ; i < balls.length; i++){
+      if(balls[i].id === id){
+          balls.splice(i,1);
+          break;
+      }
+  }
+  delete ballMap[id];
 }
 
 function updateState(id: string, x: number, y: number){
@@ -107,12 +123,16 @@ function updateState(id: string, x: number, y: number){
 /* ================== 서버 관련 시작 ================== */
 const socket = io('http://localhost:3000');
 
+socket.on('user_id', function(data){
+  myId = data;
+});
+
 socket.on('join_user', function(data){
-  console.log("join_user");
-  let temp = joinUser(data.id, data.color, data.x, data.y);
-  console.log(temp);
-  console.log(ballMap);
-  console.log(balls);
+  joinUser(data.id, data.color, data.x, data.y);
+})
+
+socket.on('leave_user', function(data){
+  leaveUser(data);
 })
 
 socket.on('update_state', function(data){
@@ -121,12 +141,11 @@ socket.on('update_state', function(data){
 
 function sendData() {
   let curPlayer = ballMap[myId];
-  let data = {};
-  data = {
-      id : curPlayer.id,
-      x: curPlayer.x,
-      y: curPlayer.y,
-  };
+  let data: dataToServer = {
+    id: curPlayer.id,
+    x: curPlayer.x,
+    y: curPlayer.y
+  }
   if(data){
       socket.emit("send_location", data);
   }
@@ -175,16 +194,18 @@ function App() {
       /*==== 캔버스 요소 조작 끝====*/
 
       let curPlayer = ballMap[myId];
+      // console.log(curPlayer);
 
       if (joystickData.state === "move"){
         curPlayer.x += joystickData.moveX;
         curPlayer.y += joystickData.moveY;
+        sendData();
       } else if (joystickData.state === "stop"){
         joystickData.moveX = 0;
         joystickData.moveY = 0;
       }
 
-      sendData();
+      // sendData();
 
       //canvas에 애니메이션이 작동하게 하는 함수. 
       requestAnimationFrame(render);
