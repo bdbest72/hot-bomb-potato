@@ -21,6 +21,8 @@ function getPlayerColor(){
     return "#" + Math.floor(Math.random() * 16777215).toString(16);
 }
 
+let ballColor = ['red','blue','green','yellow','orange','purple','white','black'] //8 color setting
+
 const startX = 360;
 const startY = 500;
 
@@ -59,27 +61,33 @@ function endGame(socket){
     delete ballMap[socket.id];
 }
 
+//client 연결시 아래 코드 안에서 통신함
 io.on('connection', (socket)=>{
     console.log(`${socket.id} is entered ${Date()}`);
 
+    //연결 종료시 작업
     socket.on('disconnect', (reason)=>{
         console.log(socket.id + ' has left because of ' + reason + ' ' + Date());
         endGame(socket);
     })
 
+    //게임에 필요한 ball생성 작업
     let newBall = joinGame(socket);
 
+    //생성된 ball들의 기초 정보 전송
     for(var i=0; i < balls.length; i++){
         let ball = balls[i];
         socket.emit('join_user',{
             id: ball.id,
-            x: ball.x,
-            y: ball.y,
-            color: ball.color,
+            x: 140 + 80*(i%2) ,
+            y: 100 + 100*parseInt(i/2),
+            color: ballColor[i],
         });
     }
 
+    //업데이트된 위치 정보 받아서
     socket.on('send_location', data =>{
+        //각 클라이언트로 위치 정보 전송
         socket.emit('update_state',{
             id: data.id,
             x: data.x,
