@@ -17,10 +17,6 @@ app.get('/',(req,res)=>{
     res.sendFile(path.join('../','../','build/index.html'));
 })
 
-function getPlayerColor(){
-    return "#" + Math.floor(Math.random() * 16777215).toString(16);
-}
-
 let ballColor = ['red','blue','green','yellow','orange','purple','white','black'] //8 color setting
 
 const startX = 360;
@@ -29,9 +25,9 @@ const startY = 500;
 class PlayerBall{
     constructor(socket){
         this.socket = socket;
-        this.x = Math.floor(startX * Math.random());
-        this.y = Math.floor(startY * Math.random());
-        this.color = getPlayerColor();
+        this.x = 0;
+        this.y = 0;
+        this.color = 'red';
     }
     
     get id() {
@@ -69,10 +65,12 @@ io.on('connection', (socket)=>{
     socket.on('disconnect', (reason)=>{
         console.log(socket.id + ' has left because of ' + reason + ' ' + Date());
         endGame(socket);
+        socket.emit('leave_user', socket.id); //떠날 때 socket.id 값 송신
     })
 
     //게임에 필요한 ball생성 작업
     let newBall = joinGame(socket);
+    socket.emit('user_id', socket.id); //접속한 socket.id 송신
 
     //생성된 ball들의 기초 정보 전송
     for(var i=0; i < balls.length; i++){
@@ -93,5 +91,5 @@ io.on('connection', (socket)=>{
             x: data.x,
             y: data.y,
         })
-    })
+    });
 })
