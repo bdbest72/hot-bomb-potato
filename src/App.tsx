@@ -2,7 +2,8 @@ import React, { useEffect, useRef } from 'react';
 import './App.css';
 import { Joystick } from 'react-joystick-component';
 import io from 'socket.io-client'
-
+import isWallCollision from './isWallCollision';
+import isBallCollision from './isBallCollision';
 
 
 /* ================== 조이스틱 관련 시작 ================== */
@@ -32,6 +33,7 @@ const handleStop = (event: IJoystickUpdateEvent) => {
 
 /* ================== 조이스틱 관련 끝 ================== */
 
+/* ================== 타입 및 클래스 선언 시작================== */
 class playerBall {
   id: string;
   color: string;
@@ -58,6 +60,8 @@ type dataToServer = {
   x: number;
   y: number;
 }
+
+/* ================== 타입 및 클래스 선언 끝================== */
 
 /* ================== 게임 정보 관련 시작 ================== */
 //Note: 현재 픽셀 위치 설정은 canvas 360x500을 기준으로 맞춰져있습니다.
@@ -125,6 +129,7 @@ const socket = io('http://localhost:3000');
 
 socket.on('user_id', function(data){
   myId = data;
+  console.log(myId);
 });
 
 socket.on('join_user', function(data){
@@ -158,14 +163,6 @@ function ClearCanvas(ctx: any, canvas: any) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
-// function drawCircle(ctx: any) {
-//   ctx.fillStyle = "red";
-//   ctx.beginPath();
-//   ctx.arc(x, y, ballRad, 0, 2 * Math.PI);
-//   ctx.fill();
-//   ctx.stroke();
-// }
-
 /* ================== 캔버스 출력 관련 끝================== */
 
 function App() {
@@ -178,7 +175,7 @@ function App() {
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
 
-      /*==== 캔버스 요소 조작 시작====*/
+      /*==== 캔버스 요소 조작 시작 ====*/
       ClearCanvas(ctx, canvas);
 
       for (let i = 0; i < balls.length; i++) {
@@ -189,44 +186,63 @@ function App() {
         ctx.arc(ball.x, ball.y, ballRad, 0, 2 * Math.PI);
         ctx.fill();
         ctx.stroke();
+
+        ctx.beginPath();
+        ctx.font = '15px Arial';
+        ctx.fillText(`player ${i}`,ball.x - ballRad - 7, ball.y - ballRad);
+        ctx.closePath();
       }
 
-      /*==== 캔버스 요소 조작 끝====*/
+      /*==== 캔버스 요소 조작 끝 ====*/
+
+      /*==== 데이터 조작 후 서버 전송 ====*/
 
       let curPlayer = ballMap[myId];
-      // console.log(curPlayer);
 
       if (joystickData.state === "move"){
-        curPlayer.x += joystickData.moveX;
-        curPlayer.y += joystickData.moveY;
-        sendData();
+        let tempSpeed: number[] = [joystickData.moveX, joystickData.moveY];
+
+        tempSpeed = isWallCollision(joystickData, curPlayer, canvas, tempSpeed[0], tempSpeed[1], ballRad);
+
+        // ball collision check 추가 예정
+
+        curPlayer.x += tempSpeed[0];
+        curPlayer.y += tempSpeed[1];
+
+        console.log(tempSpeed);
+
       } else if (joystickData.state === "stop"){
         joystickData.moveX = 0;
         joystickData.moveY = 0;
       }
 
-      // sendData();
+      if (curPlayer !== undefined) {
+        sendData();
+      }
+      
+
+      /*==== 데이터 조작 후 서버 전송 ====*/
 
       //canvas에 애니메이션이 작동하게 하는 함수. 
       requestAnimationFrame(render);
     };
-
-    // setInterval(render, 10);
     render();
   });
 
   return (
     <div className="hotBombPotato">
-      <canvas
-        id="canvas"
-        ref={canvasRef}
-        height={CanvasHeight}
-        width={CanvasWidth} />
+      <div>
+        <canvas
+          id="canvas"
+          ref={canvasRef}
+          height={CanvasHeight}
+          width={CanvasWidth} />
+      </div>
       <div className="joystick">
         <Joystick 
           size={100} 
-          baseColor="red" 
-          stickColor="blue" 
+          baseColor="lightgray" 
+          stickColor="gray" 
           move={handleMove} 
           stop={handleStop}
           throttle={120}
