@@ -1,12 +1,21 @@
-export default function isBallCollision(gameData: any, canvas: any){
-  const rSum = 40;
-  const dx = gameData.x - 250;
-  const dy = gameData.y - 250;
+type playerBallType = {
+  id: string;
+  color: string;
+  x: number;
+  y: number;
+  bomb: boolean;
+}
+
+export default function isBallCollision(ball1: playerBallType, ball2: playerBallType, ballRad: number){
+  const radiusSum = ballRad * 2;
+  const dx = ball2.x - ball1.x;
+  const dy = ball2.y - ball1.y;
   // console.log(gameData.x, gameData.y)
 
-  if (rSum*rSum > dx*dx + dy*dy) {
-    console.log("hello")
-    gameData.moveY *= -2;
-    gameData.moveX *= -2;
+  if (radiusSum*radiusSum > dx*dx + dy*dy) {
+    //ball collide
+    return true;
+  } else {
+    return false;
   }
 }

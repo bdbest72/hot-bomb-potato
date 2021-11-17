@@ -4,6 +4,7 @@ import { Joystick } from 'react-joystick-component';
 import io from 'socket.io-client'
 import isWallCollision from './isWallCollision';
 import isBallCollision from './isBallCollision';
+import bombImage from './image/bomb.png'
 
 
 /* ================== 조이스틱 관련 시작 ================== */
@@ -33,18 +34,27 @@ const handleStop = (event: IJoystickUpdateEvent) => {
 
 /* ================== 조이스틱 관련 끝 ================== */
 
+/* ================== 이미지 관련 시작 ================== */
+
+const bomb = new Image();
+bomb.src = bombImage;
+
+/* ================== 이미지 관련 끝 ================== */
+
 /* ================== 타입 및 클래스 선언 시작================== */
 class playerBall {
   id: string;
   color: string;
   x: number;
   y: number;
+  bomb: boolean;
 
   constructor() {
     this.id = "";
     this.color = "#FF00FF";
     this.x = 360/2;
     this.y = 500/2;
+    this.bomb = false;
   }
 }
 
@@ -53,6 +63,7 @@ type playerBallType = {
   color: string;
   x: number;
   y: number;
+  bomb: boolean;
 }
 
 type dataToServer = {
@@ -177,7 +188,8 @@ function App() {
 
       /*==== 캔버스 요소 조작 시작 ====*/
       ClearCanvas(ctx, canvas);
-
+      
+      // 공들 출력
       for (let i = 0; i < balls.length; i++) {
         let ball = balls[i];
         
@@ -187,11 +199,15 @@ function App() {
         ctx.fill();
         ctx.stroke();
 
+        ctx.drawImage(bomb, ball.x - ballRad, ball.y- ballRad, 40, 40);
+
         ctx.beginPath();
         ctx.font = '15px Arial';
         ctx.fillText(`player ${i}`,ball.x - ballRad - 7, ball.y - ballRad);
         ctx.closePath();
       }
+
+      ctx.drawImage(bomb, 300, 300, 40, 40);
 
       /*==== 캔버스 요소 조작 끝 ====*/
 
@@ -203,18 +219,30 @@ function App() {
         let tempSpeed: number[] = [joystickData.moveX, joystickData.moveY];
 
         tempSpeed = isWallCollision(joystickData, curPlayer, canvas, tempSpeed[0], tempSpeed[1], ballRad);
-
+        
         // ball collision check 추가 예정
+        for (let ball of balls) {
+          if (curPlayer.id !== ball.id) {
+            const collision: boolean = isBallCollision(curPlayer, ball, ballRad);
+            if (collision) {
+              console.log("collision");
+              // 폭탄일 경우
+              // 상임
 
+              tempSpeed[0] *= -20;
+              tempSpeed[1] *= -20;
+            }
+          }
+        }
+        
         curPlayer.x += tempSpeed[0];
         curPlayer.y += tempSpeed[1];
-
-        console.log(tempSpeed);
-
-      } else if (joystickData.state === "stop"){
-        joystickData.moveX = 0;
-        joystickData.moveY = 0;
-      }
+      } 
+      
+      // else if (joystickData.state === "stop"){
+      //   joystickData.moveX = 0;
+      //   joystickData.moveY = 0;
+      // }
 
       if (curPlayer !== undefined) {
         sendData();
