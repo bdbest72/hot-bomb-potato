@@ -17,14 +17,16 @@ app.get('/',(req,res)=>{
     res.sendFile(path.join('../','../','build/index.html'));
 })
 
+let ballSeq = [false, false, false, false, false, false, false, false]
 let ballColor = ['red','blue','green','yellow','orange','purple','white','hotpink'] //8 color setting
 
 class PlayerBall{
     constructor(socket){
         this.socket = socket;
+        this.seq;
         this.x = 0;
         this.y = 0;
-        this.color = 'red';
+        this.color = ballColor[0];
         this.bomb = false;
     }
     
@@ -38,6 +40,19 @@ let ballMap = {};
 
 function joinGame(socket){
     let ball = new PlayerBall(socket);
+    for(let i=0; i<8; i++){
+        if(ballSeq[i] === false){
+            ball.seq = i;
+            ballSeq[i] = true;
+            break
+        }
+    }
+    let seq = ball.seq;
+    ball.x = 140 + 80*(seq%2);
+    ball.y = 100 + 100*parseInt(seq/2);
+    ball.color = ballColor[seq];
+    if(seq === 0)
+        ball.bomb = true
 
     balls.push(ball);
     ballMap[socket.id] = ball;
@@ -52,6 +67,7 @@ function endGame(socket){
             break
         }
     }
+    ballSeq[ballMap[socket.id].seq] = false
     delete ballMap[socket.id];
 }
 
@@ -70,17 +86,8 @@ io.on('connection', (socket)=>{
     let newBall = joinGame(socket);
     socket.emit('user_id', socket.id); //접속한 socket.id 송신
 
-    balls[0].bomb = true
     //생성된 ball들의 기초 정보 전송
     for(let i=0; i < balls.length; i++){
-        balls[i].color = ballColor[i]
-        if(balls[i].x === 0){
-            balls[i].x = 140 + 80*(i%2)
-        }
-        if(balls[i].y === 0){
-            balls[i].y = 100 + 100*parseInt(i/2)
-        }
-
         let ball = balls[i];
         socket.emit('join_user',{
             id: ball.id,
@@ -116,18 +123,18 @@ io.on('connection', (socket)=>{
         send.bomb = false;
         receive.bomb = true;
         //넘겨주는 ball 정보 전송
-        socket.broadcast.emit('update_state',{
-            id: send.id,
-            x: send.x,
-            y: send.y,
-            bomb: send.bomb,
-        })
-        //받는 ball 정보 전송
-        socket.broadcast.emit('update_state',{
-            id: receive.id,
-            x: receive.x,
-            y: receive.y,
-            bomb: receive.bomb,
+        console.log(send.x, send.y, send.color,send.bomb);
+        console.log(receive.x, receive.y, receive.color, receive.bomb);
+        socket.broadcast.emit('update_bomb',{
+            sid: send.id,
+            sx: send.x,
+            sy: send.y,
+            sbomb: send.bomb,
+
+            rid: receive.id,
+            rx: receive.x,
+            ry: receive.y,
+            rbomb: receive.bomb,
         })
     })
 })

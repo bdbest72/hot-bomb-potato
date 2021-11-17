@@ -141,6 +141,31 @@ function updateState(id: string, x: number, y: number, bomb: boolean){
   }
 }
 
+function updateBomb(sid: string, sbomb: boolean, rid: string, rbomb: boolean){
+  for(let i = 0 ; i < balls.length; i++){
+    if(balls[i].id === sid) {
+      balls[i].bomb = sbomb;
+      break;
+    }
+    if(balls[i].id === rid) {
+      balls[i].bomb = rbomb;
+      break;
+    }
+  }
+
+  let sball = ballMap[sid];
+  let rball = ballMap[rid];
+  if(!sball){
+      return;
+  }
+  if(!rball){
+    return;
+}
+  sball.bomb = false;
+  rball.bomb = true;
+  sendData(sid);
+  sendData(rid);
+}
 /* ================== 게임 정보 관련 끝 ================== */
 
 /* ================== 서버 관련 시작 ================== */
@@ -161,6 +186,10 @@ socket.on('leave_user', function(data){
 
 socket.on('update_state', function(data){
   updateState(data.id, data.x, data.y, data.bomb);
+})
+
+socket.on('update_bomb', function(data){
+  updateBomb(data.sid, data.sbomb, data.rid, data.rbomb)
 })
 
 function sendData(id: string) {
