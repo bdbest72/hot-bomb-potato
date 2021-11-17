@@ -144,7 +144,7 @@ function updateState(id: string, x: number, y: number, bomb: boolean){
 /* ================== 게임 정보 관련 끝 ================== */
 
 /* ================== 서버 관련 시작 ================== */
-const socket = io('http://localhost:3000');
+const socket = io();
 
 socket.on('user_id', function(data){
   myId = data;
