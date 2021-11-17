@@ -117,11 +117,13 @@ function leaveUser(id: string){
   delete ballMap[id];
 }
 
-function updateState(id: string, x: number, y: number){
+function updateState(id: string, x: number, y: number, bomb: boolean){
+  
   for(let i = 0 ; i < balls.length; i++){
     if(balls[i].id === id) {
       balls[i].x = x;
       balls[i].y = y;
+      balls[i].bomb = bomb;
       break;
     }
   }
@@ -132,6 +134,11 @@ function updateState(id: string, x: number, y: number){
   }
   ball.x = x;
   ball.y = y;
+  ball.bomb = bomb;
+
+  if (bomb) {
+    console.log(ball);
+  }
 }
 
 /* ================== 게임 정보 관련 끝 ================== */
@@ -153,7 +160,7 @@ socket.on('leave_user', function(data){
 })
 
 socket.on('update_state', function(data){
-  updateState(data.id, data.x, data.y);
+  updateState(data.id, data.x, data.y, data.bomb);
 })
 
 function sendData(id: string) {
@@ -166,6 +173,18 @@ function sendData(id: string) {
   if(data){
       socket.emit("send_location", data);
   }
+}
+
+function bombChange(ballId1: string, ballId2: string) {
+  console.log("bomb change");
+  let data = {
+    send: ballId1,
+    receive: ballId2,
+  }
+  if (data) {
+    socket.emit("bomb_change", data);
+  }
+  console.log(data);
 }
 /* ================== 서버 관련 끝 ================== */
 
@@ -201,7 +220,6 @@ function App() {
         ctx.stroke();
 
         if (ball.bomb === true) {
-          console.log()
           ctx.drawImage(bomb, ball.x - ballRad, ball.y- ballRad, 40, 40);
         }
         
@@ -233,7 +251,9 @@ function App() {
               console.log("collision");
 
               // 폭탄일 경우
-              // 상임
+              if (curPlayer.bomb && curPlayer !== undefined && balls.length > 1) {
+                bombChange(curPlayer.id, ball.id);
+              }
 
               tempSpeed[0] *= -20;
               tempSpeed[1] *= -20;
@@ -252,7 +272,6 @@ function App() {
 
       if (curPlayer !== undefined) {
         sendData(curPlayer.id);
-        console.log(curPlayer.bomb);
       }
       
       
