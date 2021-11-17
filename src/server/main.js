@@ -25,7 +25,7 @@ class PlayerBall{
         this.x = 0;
         this.y = 0;
         this.color = 'red';
-        this.bomb = False;
+        this.bomb = false;
     }
     
     get id() {
@@ -70,6 +70,7 @@ io.on('connection', (socket)=>{
     let newBall = joinGame(socket);
     socket.emit('user_id', socket.id); //접속한 socket.id 송신
 
+    balls[0].bomb = true
     //생성된 ball들의 기초 정보 전송
     for(let i=0; i < balls.length; i++){
         balls[i].color = ballColor[i]
@@ -79,8 +80,6 @@ io.on('connection', (socket)=>{
         if(balls[i].y === 0){
             balls[i].y = 100 + 100*parseInt(i/2)
         }
-        if (i === 0)
-            balls[i].bomb = true;
 
         let ball = balls[i];
         socket.emit('join_user',{
@@ -106,6 +105,29 @@ io.on('connection', (socket)=>{
             id: data.id,
             x: data.x,
             y: data.y,
+            bomb: ballMap[data.id].bomb,
         })
     });
+
+    //폭탄 변경 상황 정보 받아서
+    socket.on('bomb_change', data =>{
+        let send = ballMap[data.send];
+        let receive = ballMap[data.receive];
+        send.bomb = false;
+        receive.bomb = true;
+        //넘겨주는 ball 정보 전송
+        socket.broadcast.emit('update_state',{
+            id: send.id,
+            x: send.x,
+            y: send.y,
+            bomb: send.bomb,
+        })
+        //받는 ball 정보 전송
+        socket.broadcast.emit('update_state',{
+            id: receive.id,
+            x: receive.x,
+            y: receive.y,
+            bomb: receive.bomb,
+        })
+    })
 })
