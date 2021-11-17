@@ -17,7 +17,7 @@ app.get('/',(req,res)=>{
     res.sendFile(path.join('../','../','build/index.html'));
 })
 
-let ballColor = ['red','blue','green','yellow','orange','purple','white','black'] //8 color setting
+let ballColor = ['red','blue','green','yellow','orange','purple','white','hotpink'] //8 color setting
 
 class PlayerBall{
     constructor(socket){
@@ -25,6 +25,7 @@ class PlayerBall{
         this.x = 0;
         this.y = 0;
         this.color = 'red';
+        this.bomb = False;
     }
     
     get id() {
@@ -78,12 +79,16 @@ io.on('connection', (socket)=>{
         if(balls[i].y === 0){
             balls[i].y = 100 + 100*parseInt(i/2)
         }
+        if (i === 0)
+            balls[i].bomb = true;
+
         let ball = balls[i];
         socket.emit('join_user',{
             id: ball.id,
             x: ball.x,
             y: ball.y,
             color: ball.color,
+            bomb: ball.bomb,
         });
     }
     socket.broadcast.emit('join_user',{
@@ -91,6 +96,7 @@ io.on('connection', (socket)=>{
         x: newBall.x,
         y: newBall.y,
         color: newBall.color,
+        bomb: newBall.bomb,
     })
 
     //업데이트된 위치 정보 받아서
