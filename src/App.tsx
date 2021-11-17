@@ -92,13 +92,14 @@ const joystickData = {
   state: "stop",
 }
 
-function joinUser(id: string, color: string, x: number, y: number){
+function joinUser(id: string, color: string, x: number, y: number, bomb: boolean){
   console.log("join user");
   let ball = new playerBall();
   ball.id = id;
   ball.color = color;
   ball.x = x;
   ball.y = y;
+  ball.bomb = bomb;
 
   balls.push(ball);
   ballMap[id] = ball;
@@ -144,7 +145,7 @@ socket.on('user_id', function(data){
 });
 
 socket.on('join_user', function(data){
-  joinUser(data.id, data.color, data.x, data.y);
+  joinUser(data.id, data.color, data.x, data.y, data.bomb);
 })
 
 socket.on('leave_user', function(data){
@@ -155,12 +156,12 @@ socket.on('update_state', function(data){
   updateState(data.id, data.x, data.y);
 })
 
-function sendData() {
-  let curPlayer = ballMap[myId];
+function sendData(id: string) {
+  let Player = ballMap[id];
   let data: dataToServer = {
-    id: curPlayer.id,
-    x: curPlayer.x,
-    y: curPlayer.y
+    id: Player.id,
+    x: Player.x,
+    y: Player.y
   }
   if(data){
       socket.emit("send_location", data);
@@ -199,8 +200,11 @@ function App() {
         ctx.fill();
         ctx.stroke();
 
-        ctx.drawImage(bomb, ball.x - ballRad, ball.y- ballRad, 40, 40);
-
+        if (ball.bomb === true) {
+          console.log()
+          ctx.drawImage(bomb, ball.x - ballRad, ball.y- ballRad, 40, 40);
+        }
+        
         ctx.beginPath();
         ctx.font = '15px Arial';
         ctx.fillText(`player ${i}`,ball.x - ballRad - 7, ball.y - ballRad);
@@ -220,12 +224,14 @@ function App() {
 
         tempSpeed = isWallCollision(joystickData, curPlayer, canvas, tempSpeed[0], tempSpeed[1], ballRad);
         
-        // ball collision check 추가 예정
+        // ball collision check 
         for (let ball of balls) {
           if (curPlayer.id !== ball.id) {
             const collision: boolean = isBallCollision(curPlayer, ball, ballRad);
+            // 충돌했을때
             if (collision) {
               console.log("collision");
+
               // 폭탄일 경우
               // 상임
 
@@ -245,10 +251,11 @@ function App() {
       // }
 
       if (curPlayer !== undefined) {
-        sendData();
+        sendData(curPlayer.id);
+        console.log(curPlayer.bomb);
       }
       
-
+      
       /*==== 데이터 조작 후 서버 전송 ====*/
 
       //canvas에 애니메이션이 작동하게 하는 함수. 
