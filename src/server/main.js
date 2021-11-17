@@ -19,9 +19,6 @@ app.get('/',(req,res)=>{
 
 let ballColor = ['red','blue','green','yellow','orange','purple','white','black'] //8 color setting
 
-const startX = 360;
-const startY = 500;
-
 class PlayerBall{
     constructor(socket){
         this.socket = socket;
@@ -35,8 +32,8 @@ class PlayerBall{
     }
 }
 
-var balls = [];
-var ballMap = {};
+let balls = [];
+let ballMap = {};
 
 function joinGame(socket){
     let ball = new PlayerBall(socket);
@@ -48,7 +45,7 @@ function joinGame(socket){
 }
 
 function endGame(socket){
-    for(var i=0; i<balls.length; i++){
+    for(let i=0; i<balls.length; i++){
         if(balls[i].id === socket.id){
             balls.splice(i,1);
             break
@@ -65,7 +62,7 @@ io.on('connection', (socket)=>{
     socket.on('disconnect', (reason)=>{
         console.log(socket.id + ' has left because of ' + reason + ' ' + Date());
         endGame(socket);
-        socket.emit('leave_user', socket.id); //떠날 때 socket.id 값 송신
+        socket.broadcast.emit('leave_user', socket.id); //떠날 때 socket.id 값 송신
     })
 
     //게임에 필요한 ball생성 작업
@@ -73,20 +70,33 @@ io.on('connection', (socket)=>{
     socket.emit('user_id', socket.id); //접속한 socket.id 송신
 
     //생성된 ball들의 기초 정보 전송
-    for(var i=0; i < balls.length; i++){
+    for(let i=0; i < balls.length; i++){
+        balls[i].color = ballColor[i]
+        if(balls[i].x === 0){
+            balls[i].x = 140 + 80*(i%2)
+        }
+        if(balls[i].y === 0){
+            balls[i].y = 100 + 100*parseInt(i/2)
+        }
         let ball = balls[i];
         socket.emit('join_user',{
             id: ball.id,
-            x: 140 + 80*(i%2) ,
-            y: 100 + 100*parseInt(i/2),
-            color: ballColor[i],
+            x: ball.x,
+            y: ball.y,
+            color: ball.color,
         });
     }
+    socket.broadcast.emit('join_user',{
+        id: newBall.id,
+        x: newBall.x,
+        y: newBall.y,
+        color: newBall.color,
+    })
 
     //업데이트된 위치 정보 받아서
     socket.on('send_location', data =>{
         //각 클라이언트로 위치 정보 전송
-        socket.emit('update_state',{
+        socket.broadcast.emit('update_state',{
             id: data.id,
             x: data.x,
             y: data.y,
