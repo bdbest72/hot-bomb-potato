@@ -264,14 +264,20 @@ function App() {
 
   const handleGameEvents = () => {
     /*==== 데이터 조작 후 서버 전송 ====*/
-
+    // 내가 직접 공 위치 바꾸면 안됌1(수정예정)
     let curPlayer = ballMap[myId];
 
     if (joystickData.state === "move"){
-      let tempSpeed: number[] = [joystickData.moveX, joystickData.moveY];
+      let xySpeedArrary: number[] = [joystickData.moveX, joystickData.moveY];
+
+      // 조이스틱 이동 값에 따라 공 이동
+      curPlayer.x += xySpeedArrary[0];
+      curPlayer.y += xySpeedArrary[1];
       
       // balls 라스트 안의 공들과 내 공의 출동 확인
       for (let ball of balls) {
+        // 내가 직접 공 위치 바꾸면 안됌2(수정예정)
+
         if (curPlayer.id !== ball.id) {
           const collision: boolean = isBallCollision(curPlayer, ball, ballRad);
 
@@ -285,22 +291,27 @@ function App() {
             }
 
             //튕겨나가게 해줌
-            tempSpeed[0] *= -40;
-            tempSpeed[1] *= -40;
+            xySpeedArrary[0] *= -40;
+            xySpeedArrary[1] *= -40;
 
             // 부딕친 상대 공을 튕겨 나가게 해줌.
-            ball.x -= tempSpeed[0];
-            ball.y -= tempSpeed[1]; 
+            ball.x -= xySpeedArrary[0];
+            ball.y -= xySpeedArrary[1]; 
+
+            let adjustedBallPosition: number[] = isWallCollision(ball, canvasHeight, canvasWidth, xySpeedArrary, ballRad);
+
+            ball.x = adjustedBallPosition[0];
+            ball.y = adjustedBallPosition[1];
+
             sendData(ball.id);
           }
         }
       }
-
       // 벽 충돌 체크 후 tempSpeed를 업데이트
-      tempSpeed = isWallCollision(joystickData, curPlayer, canvasHeight, canvasWidth, tempSpeed[0], tempSpeed[1], ballRad);
-      
-      curPlayer.x += tempSpeed[0];
-      curPlayer.y += tempSpeed[1];
+      let adjustedBallPosition: number[] = isWallCollision(curPlayer, canvasHeight, canvasWidth, xySpeedArrary, ballRad);
+
+      curPlayer.x = adjustedBallPosition[0];
+      curPlayer.y = adjustedBallPosition[1];
     } 
 
     if (curPlayer !== undefined) {
