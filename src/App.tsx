@@ -153,18 +153,16 @@ function updateBomb(sid: string, sbomb: boolean, rid: string, rbomb: boolean){
 
   let sball = ballMap[sid];
   let rball = ballMap[rid];
-  if(!sball){
-      return;
-  }
-  if(!rball){
-    return;
-}
-  sball.bomb = false;
-  rball.bomb = true;
+
+  if(!sball){ return; }
+  if(!rball){ return; }
+
+  sball.bomb = sbomb;
+  rball.bomb = rbomb;
 
   //클라이언트 사이드에서 생긴 변경사항을 서버에 다시 보내서 정확한 데이터를 돌려 받게함
-  sendData(sid);
-  sendData(rid);
+  sendData(sball);
+  sendData(rball);
 }
 /* ================== 게임 정보 관련 끝 ================== */
 
@@ -184,6 +182,7 @@ socket.on('leave_user', function(data){
 })
 
 socket.on('update_state', function(data){
+  console.log("update",data.x, data.y);
   updateState(data.id, data.x, data.y, data.bomb);
 })
 
@@ -191,13 +190,13 @@ socket.on('update_bomb', function(data){
   updateBomb(data.sid, data.sbomb, data.rid, data.rbomb)
 })
 
-function sendData(id: string) {
-  let Player = ballMap[id];
+function sendData(Player: playerBallType) {
   let data: dataToServer = {
     id: Player.id,
     x: Player.x,
     y: Player.y,
   }
+  console.log("send", data.x, data.y);
   if(data){
       socket.emit("send_location", data);
   }
@@ -265,29 +264,31 @@ function App() {
   const handleGameEvents = () => {
     /*==== 데이터 조작 후 서버 전송 ====*/
     // 내가 직접 공 위치 바꾸면 안됌1(수정예정)
-    let curPlayer = ballMap[myId];
+    const curPlayer = ballMap[myId];
+    const curPlayerBallClone: playerBallType = JSON.parse(JSON.stringify(curPlayer));
 
     if (joystickData.state === "move"){
       let xySpeedArrary: number[] = [joystickData.moveX, joystickData.moveY];
 
       // 조이스틱 이동 값에 따라 공 이동
-      curPlayer.x += xySpeedArrary[0];
-      curPlayer.y += xySpeedArrary[1];
+      curPlayerBallClone.x += xySpeedArrary[0];
+      curPlayerBallClone.y += xySpeedArrary[1];
       
       // balls 라스트 안의 공들과 내 공의 출동 확인
       for (let ball of balls) {
         // 내가 직접 공 위치 바꾸면 안됌2(수정예정)
+        const otherPlayerBallClone = JSON.parse(JSON.stringify(ballMap[ball.id]));
 
-        if (curPlayer.id !== ball.id) {
-          const collision: boolean = isBallCollision(curPlayer, ball, ballRad);
+        if (curPlayerBallClone.id !== otherPlayerBallClone.id) {
+          const collision: boolean = isBallCollision(curPlayerBallClone, otherPlayerBallClone, ballRad);
 
           // 충돌했을때
           if (collision) {
             console.log("collision");
 
             // 내가 폭탄일 경우, 상대방한테 넘겨줌
-            if (curPlayer.bomb && curPlayer !== undefined && balls.length > 1) {
-              bombChange(curPlayer.id, ball.id);
+            if (curPlayerBallClone.bomb && curPlayerBallClone !== undefined && balls.length > 1) {
+              bombChange(curPlayerBallClone.id, otherPlayerBallClone.id);
             }
 
             //튕겨나가게 해줌
@@ -295,28 +296,27 @@ function App() {
             xySpeedArrary[1] *= -40;
 
             // 부딕친 상대 공을 튕겨 나가게 해줌.
-            ball.x -= xySpeedArrary[0];
-            ball.y -= xySpeedArrary[1]; 
+            otherPlayerBallClone.x -= xySpeedArrary[0];
+            otherPlayerBallClone.y -= xySpeedArrary[1]; 
 
-            let adjustedBallPosition: number[] = isWallCollision(ball, canvasHeight, canvasWidth, xySpeedArrary, ballRad);
+            let adjustedBallPosition1: number[] = isWallCollision(otherPlayerBallClone, canvasHeight, canvasWidth, xySpeedArrary, ballRad);
 
-            ball.x = adjustedBallPosition[0];
-            ball.y = adjustedBallPosition[1];
+            otherPlayerBallClone.x = adjustedBallPosition1[0];
+            otherPlayerBallClone.y = adjustedBallPosition1[1];
 
-            sendData(ball.id);
+            sendData(otherPlayerBallClone);
           }
         }
       }
       // 벽 충돌 체크 후 tempSpeed를 업데이트
-      let adjustedBallPosition: number[] = isWallCollision(curPlayer, canvasHeight, canvasWidth, xySpeedArrary, ballRad);
+      let adjustedBallPosition2: number[] = isWallCollision(curPlayerBallClone, canvasHeight, canvasWidth, xySpeedArrary, ballRad);
 
-      curPlayer.x = adjustedBallPosition[0];
-      curPlayer.y = adjustedBallPosition[1];
+      curPlayerBallClone.x = adjustedBallPosition2[0];
+      curPlayerBallClone.y = adjustedBallPosition2[1];
     } 
 
-    if (curPlayer !== undefined) {
-      console.log("senddata")
-      sendData(curPlayer.id);
+    if (curPlayerBallClone !== undefined) {
+      sendData(curPlayerBallClone);
     }
     
     /*==== 데이터 조작 후 서버 전송 ====*/
