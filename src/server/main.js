@@ -19,6 +19,7 @@ app.get('/',(req,res)=>{
 
 let ballSeq = [false, false, false, false, false, false, false, false]
 let ballColor = ['red','blue','green','yellow','orange','purple','white','hotpink'] //8 color setting
+let gameStart = false;
 
 class PlayerBall{
     constructor(socket){
@@ -105,35 +106,47 @@ io.on('connection', (socket)=>{
         bomb: newBall.bomb,
     })
 
+    //게임시작 신호
+    if(balls.length === 4){
+        gameStart = true;
+    }
+
+    //게임종료 신호
+    if(balls.length === 5){
+        setTimeout(function(){
+        gameStart = false;
+        }, 3000)
+    }
+    
     //업데이트된 위치 정보 받아서
     socket.on('send_location', data =>{
-        //각 클라이언트로 위치 정보 전송
-        socket.broadcast.emit('update_state',{
-            id: data.id,
-            x: data.x,
-            y: data.y,
-            bomb: ballMap[data.id].bomb,
-        })
+            if(gameStart){ //게임시작 여부 판별
+            let info = ballMap[data.id]
+            info.x = data.x
+            info.y = data.y
+            console.log(info.x,info.y,info.color);
+            //각 클라이언트로 위치 정보 전송
+            socket.broadcast.emit('update_state',{
+                id: data.id,
+                x: info.x,
+                y: info.y,
+                bomb: info.bomb,
+            })
+        }
     });
 
-    //폭탄 변경 상황 정보 받아서
+        //폭탄 변경 상황 정보 받아서
     socket.on('bomb_change', data =>{
         let send = ballMap[data.send];
         let receive = ballMap[data.receive];
         send.bomb = false;
         receive.bomb = true;
-        //넘겨주는 ball 정보 전송
-        console.log(send.x, send.y, send.color,send.bomb);
-        console.log(receive.x, receive.y, receive.color, receive.bomb);
+        //폭탄 변경 ball 정보 전송
         socket.broadcast.emit('update_bomb',{
             sid: send.id,
-            sx: send.x,
-            sy: send.y,
             sbomb: send.bomb,
 
             rid: receive.id,
-            rx: receive.x,
-            ry: receive.y,
             rbomb: receive.bomb,
         })
     })
