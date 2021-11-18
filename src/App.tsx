@@ -76,9 +76,11 @@ type dataToServer = {
 
 /* ================== 게임 정보 관련 시작 ================== */
 //Note: 현재 픽셀 위치 설정은 canvas 360x500을 기준으로 맞춰져있습니다.
-const CanvasWidth = 360;
-const CanvasHeight = 500;
+const canvasWidth = 360;
+const canvasHeight = 500;
 const ballRad = 20;
+const ballMoveSpeed = 2; // 1 보다 큰 수로 속도 배율
+const bombMoveSpeed = 3; // 폭탄은 유저보다 빠르게
 
 const balls: playerBallType[] = [];
 const ballMap: Record<string, playerBall> = {};
@@ -135,10 +137,6 @@ function updateState(id: string, x: number, y: number, bomb: boolean){
   ball.x = x;
   ball.y = y;
   ball.bomb = bomb;
-
-  if (bomb) {
-    console.log(ball);
-  }
 }
 
 function updateBomb(sid: string, sbomb: boolean, rid: string, rbomb: boolean){
@@ -163,6 +161,8 @@ function updateBomb(sid: string, sbomb: boolean, rid: string, rbomb: boolean){
 }
   sball.bomb = false;
   rball.bomb = true;
+
+  //클라이언트 사이드에서 생긴 변경사항을 서버에 다시 보내서 정확한 데이터를 돌려 받게함
   sendData(sid);
   sendData(rid);
 }
@@ -173,7 +173,6 @@ const socket = io();
 
 socket.on('user_id', function(data){
   myId = data;
-  console.log(myId);
 });
 
 socket.on('join_user', function(data){
@@ -197,7 +196,7 @@ function sendData(id: string) {
   let data: dataToServer = {
     id: Player.id,
     x: Player.x,
-    y: Player.y
+    y: Player.y,
   }
   if(data){
       socket.emit("send_location", data);
@@ -213,7 +212,6 @@ function bombChange(ballId1: string, ballId2: string) {
   if (data) {
     socket.emit("bomb_change", data);
   }
-  console.log(data);
 }
 /* ================== 서버 관련 끝 ================== */
 
@@ -229,87 +227,93 @@ function App() {
   //canvas 사용을 위해 필요한 선언 1
   const canvasRef: any = useRef(null);
 
-  useEffect(() => {
-    const render = () => {
-      //canvas 사용을 위해 필요한 선언 2
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
+  const render = () => {
+    //canvas 사용을 위해 필요한 선언 2
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
 
-      /*==== 캔버스 요소 조작 시작 ====*/
-      ClearCanvas(ctx, canvas);
+    /*==== 캔버스 요소 조작 시작 ====*/
+
+    ClearCanvas(ctx, canvas);
+    
+    // 공들 출력
+    for (let i = 0; i < balls.length; i++) {
+      let ball = balls[i];
       
-      // 공들 출력
-      for (let i = 0; i < balls.length; i++) {
-        let ball = balls[i];
-        
-        ctx.fillStyle = ball.color;
-        ctx.beginPath();
-        ctx.arc(ball.x, ball.y, ballRad, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.stroke();
+      ctx.fillStyle = ball.color;
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, ballRad, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.stroke();
 
-        if (ball.bomb === true) {
-          ctx.drawImage(bomb, ball.x - ballRad, ball.y- ballRad, 40, 40);
-        }
-        
-        ctx.beginPath();
-        ctx.font = '15px Arial';
-        ctx.fillText(`player ${i}`,ball.x - ballRad - 7, ball.y - ballRad);
-        ctx.closePath();
+      if (ball.bomb === true) {
+        ctx.drawImage(bomb, ball.x - ballRad, ball.y- ballRad, 40, 40);
       }
+      
+      ctx.beginPath();
+      ctx.font = '15px Arial';
+      ctx.fillText(`player ${i}`,ball.x - ballRad - 7, ball.y - ballRad);
+      ctx.closePath();
+    }
 
-      ctx.drawImage(bomb, 300, 300, 40, 40);
+    /*==== 캔버스 요소 조작 끝 ====*/
 
-      /*==== 캔버스 요소 조작 끝 ====*/
+    //canvas에 애니메이션이 작동하게 하는 함수. 
+    requestAnimationFrame(render);
+  };
 
-      /*==== 데이터 조작 후 서버 전송 ====*/
+  const handleGameEvents = () => {
+    /*==== 데이터 조작 후 서버 전송 ====*/
 
-      let curPlayer = ballMap[myId];
+    let curPlayer = ballMap[myId];
 
-      if (joystickData.state === "move"){
-        let tempSpeed: number[] = [joystickData.moveX, joystickData.moveY];
+    if (joystickData.state === "move"){
+      let tempSpeed: number[] = [joystickData.moveX, joystickData.moveY];
+      
+      // balls 라스트 안의 공들과 내 공의 출동 확인
+      for (let ball of balls) {
+        if (curPlayer.id !== ball.id) {
+          const collision: boolean = isBallCollision(curPlayer, ball, ballRad);
 
-        tempSpeed = isWallCollision(joystickData, curPlayer, canvas, tempSpeed[0], tempSpeed[1], ballRad);
-        
-        // ball collision check 
-        for (let ball of balls) {
-          if (curPlayer.id !== ball.id) {
-            const collision: boolean = isBallCollision(curPlayer, ball, ballRad);
-            // 충돌했을때
-            if (collision) {
-              console.log("collision");
+          // 충돌했을때
+          if (collision) {
+            console.log("collision");
 
-              // 폭탄일 경우
-              if (curPlayer.bomb && curPlayer !== undefined && balls.length > 1) {
-                bombChange(curPlayer.id, ball.id);
-              }
-
-              tempSpeed[0] *= -20;
-              tempSpeed[1] *= -20;
+            // 내가 폭탄일 경우, 상대방한테 넘겨줌
+            if (curPlayer.bomb && curPlayer !== undefined && balls.length > 1) {
+              bombChange(curPlayer.id, ball.id);
             }
+
+            //튕겨나가게 해줌
+            tempSpeed[0] *= -40;
+            tempSpeed[1] *= -40;
+
+            // 부딕친 상대 공을 튕겨 나가게 해줌.
+            ball.x -= tempSpeed[0];
+            ball.y -= tempSpeed[1]; 
+            sendData(ball.id);
           }
         }
-        
-        curPlayer.x += tempSpeed[0];
-        curPlayer.y += tempSpeed[1];
-      } 
-      
-      // else if (joystickData.state === "stop"){
-      //   joystickData.moveX = 0;
-      //   joystickData.moveY = 0;
-      // }
-
-      if (curPlayer !== undefined) {
-        sendData(curPlayer.id);
       }
-      
-      
-      /*==== 데이터 조작 후 서버 전송 ====*/
 
-      //canvas에 애니메이션이 작동하게 하는 함수. 
-      requestAnimationFrame(render);
-    };
+      // 벽 충돌 체크 후 tempSpeed를 업데이트
+      tempSpeed = isWallCollision(joystickData, curPlayer, canvasHeight, canvasWidth, tempSpeed[0], tempSpeed[1], ballRad);
+      
+      curPlayer.x += tempSpeed[0];
+      curPlayer.y += tempSpeed[1];
+    } 
+
+    if (curPlayer !== undefined) {
+      console.log("senddata")
+      sendData(curPlayer.id);
+    }
+    
+    /*==== 데이터 조작 후 서버 전송 ====*/
+  };
+
+  useEffect(() => {
     render();
+    setInterval(handleGameEvents, 20);
   });
 
   return (
@@ -318,8 +322,8 @@ function App() {
         <canvas
           id="canvas"
           ref={canvasRef}
-          height={CanvasHeight}
-          width={CanvasWidth} />
+          height={canvasHeight}
+          width={canvasWidth} />
       </div>
       <div className="joystick">
         <Joystick 
