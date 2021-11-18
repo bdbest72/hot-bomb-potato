@@ -1,4 +1,4 @@
-export default function isWallCollision(joystickData: any, curPlayer: any, canvas: any, tempX: number, tempY: number, ballRad: number){
+export default function isWallCollision(joystickData: any, curPlayer: any, canvasHeight: any, canvasWidth: number, tempX: number, tempY: number, ballRad: number){
   if (curPlayer.y - ballRad <= 0) { //천장
     if (joystickData.moveY < 0 ) {
       joystickData.moveY = 0;
@@ -6,7 +6,7 @@ export default function isWallCollision(joystickData: any, curPlayer: any, canva
       console.log("hit bottom")
     }
     
-  } else if (curPlayer.y + ballRad >= canvas.height) { //바닥
+  } else if (curPlayer.y + ballRad >= canvasHeight) { //바닥
     if (joystickData.moveY > 0 ) {
       joystickData.moveY = 0;
       tempY = 0;
@@ -20,7 +20,7 @@ export default function isWallCollision(joystickData: any, curPlayer: any, canva
       tempX = 0;
       console.log("hit left")
     }
-  } else if (curPlayer.x + ballRad >= canvas.width) { //오른쪽 벽
+  } else if (curPlayer.x + ballRad >= canvasWidth) { //오른쪽 벽
     if (joystickData.moveX > 0 ) {
       joystickData.moveX = 0;
       tempX = 0;
