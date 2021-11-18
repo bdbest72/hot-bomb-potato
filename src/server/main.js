@@ -138,6 +138,12 @@ io.on('connection', (socket)=>{
             info.x = data.x
             info.y = data.y
             //각 클라이언트로 위치 정보 전송
+            socket.emit('update_state',{
+                id: data.id,
+                x: info.x,
+                y: info.y,
+                bomb: info.bomb,
+            })
             socket.broadcast.emit('update_state',{
                 id: data.id,
                 x: info.x,
