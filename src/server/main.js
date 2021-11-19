@@ -122,7 +122,7 @@ io.on('connection', (socket)=>{
                 }
             }
             let color = ballMap[loser].color;
-            socket.broadcast.emit('game_end',{loser, color});
+            io.emit('game_end',{loser, color});
         }, 30000) //게임시작 30초 후 종료
     })
 
@@ -138,13 +138,7 @@ io.on('connection', (socket)=>{
             info.x = data.x
             info.y = data.y
             //각 클라이언트로 위치 정보 전송
-            socket.emit('update_state',{
-                id: data.id,
-                x: info.x,
-                y: info.y,
-                bomb: info.bomb,
-            })
-            socket.broadcast.emit('update_state',{
+            io.emit('update_state',{
                 id: data.id,
                 x: info.x,
                 y: info.y,
@@ -160,7 +154,7 @@ io.on('connection', (socket)=>{
         send.bomb = false;
         receive.bomb = true;
         //폭탄 변경 ball 정보 전송
-        socket.broadcast.emit('update_bomb',{
+        io.emit('update_bomb',{
             sid: send.id,
             sbomb: send.bomb,
 
