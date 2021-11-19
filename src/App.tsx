@@ -6,7 +6,8 @@ import isWallCollision from './isWallCollision';
 import isBallCollision from './isBallCollision';
 import adjustBallPosition from './adjustPosition';
 import bombImage from './image/bomb.png'
-
+import backgroundImage from './image/gameBackground.jpg'
+import backgroundImage2 from './image/gameBackground2.jpg'
 
 /* ================== 조이스틱 관련 시작 ================== */
 type JoystickDirection = "FORWARD" | "RIGHT" | "LEFT" | "BACKWARD";
@@ -45,6 +46,9 @@ const handleStop = (event: IJoystickUpdateEvent) => {
 
 const bomb = new Image();
 bomb.src = bombImage;
+
+const gameBackground = new Image();
+gameBackground.src = backgroundImage2;
 
 /* ================== 이미지 관련 끝 ================== */
 
@@ -93,6 +97,8 @@ const balls: playerBallType[] = [];
 const ballMap: Record<string, playerBall> = {};
 let myId: string;
 let gameEnd = false;
+
+
 
 function joinUser(id: string, color: string, x: number, y: number, bomb: boolean){
   console.log("join user");
@@ -165,36 +171,7 @@ function updateBomb(sid: string, sbomb: boolean, rid: string, rbomb: boolean){
   // sendData(rball);
 }
 
-function sendData(Player: playerBallType) {
-  let data: dataToServer = {
-    id: Player.id,
-    x: Player.x,
-    y: Player.y,
-  }
-  if(data){
-      socket.emit("send_location", data);
-  }
-}
 
-function bombChange(ballId1: string, ballId2: string) {
-  console.log("bomb change");
-  let data = {
-    send: ballId1,
-    receive: ballId2,
-  }
-  if (data) {
-    socket.emit("bomb_change", data);
-  }
-}
-
-function gameStart() {
-  let data = true;
-  socket.emit("game_start", data)
-}
-
-function gameFinished(loser: string, color: string) {
-
-}
 /* ================== 게임 정보 관련 끝 ================== */
 
 /* ================== 서버 관련 시작 ================== */
@@ -224,6 +201,52 @@ socket.on('game_end', function(data){
   gameFinished(data.loser, data.color);
 });
 
+function sendData(Player: playerBallType) {
+  let data: dataToServer = {
+    id: Player.id,
+    x: Player.x,
+    y: Player.y,
+  }
+  if(data){
+      socket.emit("send_location", data);
+  }
+}
+
+function bombChange(ballId1: string, ballId2: string) {
+  console.log("bomb change");
+  let data = {
+    send: ballId1,
+    receive: ballId2,
+  }
+  if (data) {
+    socket.emit("bomb_change", data);
+  }
+}
+
+const playTime = 30;
+let progressBarHeight = 0;
+let gameTime = 0;
+
+function gameStart() {
+  let data = true;
+  socket.emit("game_start", data)
+  
+  progressBarHeight = 0;
+  gameTime = 0;
+  let timer = setInterval(function() {
+    gameTime += 0.1;
+    progressBarHeight += 1.666666667;
+    console.log(gameTime);
+    if (gameTime >= playTime) {
+      clearInterval(timer);
+    }
+  }, 100)
+}
+
+function gameFinished(loser: string, color: string) {
+
+}
+
 
 /* ================== 서버 관련 끝 ================== */
 
@@ -234,6 +257,13 @@ function ClearCanvas(ctx: any, canvas: any) {
 }
 
 /* ================== 캔버스 출력 관련 끝================== */
+
+/* ================== 게임 외적 함수 시작 ================== */
+
+
+
+
+/* ================== 게임 외적 함수 끝 ================== */
 
 function App() {
   //canvas 사용을 위해 필요한 선언 1
@@ -247,8 +277,11 @@ function App() {
     /*==== 캔버스 요소 조작 시작 ====*/
 
     ClearCanvas(ctx, canvas);
+
+    ctx.drawImage(gameBackground, 0, 0, 360, 500);
     
     // 공들 출력
+    ctx.save();
     for (let i = 0; i < balls.length; i++) {
       let ball = balls[i];
       
@@ -259,14 +292,22 @@ function App() {
       ctx.stroke();
 
       if (ball.bomb === true) {
-        ctx.drawImage(bomb, ball.x - ballRad, ball.y- ballRad, 40, 40);
+        ctx.drawImage(bomb, ball.x - ballRad - 15, ball.y- ballRad - 14, 57, 57);
       }
       
       ctx.beginPath();
       ctx.font = '15px Arial';
-      ctx.fillText(`player ${i}`,ball.x - ballRad - 7, ball.y - ballRad);
+      ctx.fillText(`player ${i}`,ball.x - ballRad - 7, ball.y - ballRad - 4);
       ctx.closePath();
     }
+    ctx.restore();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.fillStyle = "red";
+    ctx.fillRect(355, 500, 5, -progressBarHeight);
+    ctx.stroke()
+    ctx.restore();
 
     /*==== 캔버스 요소 조작 끝 ====*/
 
@@ -354,6 +395,7 @@ function App() {
     setInterval(handleGameEvents, 20);
   });
 
+
   return (
     <div className="hotBombPotato">
       <div>
@@ -374,7 +416,7 @@ function App() {
         >
         </Joystick>
       </div>
-      <button onClick={gameStart}>
+      <button onClick={() => {gameStart();}}>
         게임 시작
       </button>
     </div>
