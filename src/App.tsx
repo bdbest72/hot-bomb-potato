@@ -292,7 +292,8 @@ function App() {
         curPlayerClone.y += xySpeed[1] * ballMoveSpeed;
       }
       
-      
+      let bombChangeHappend = false;
+
       // balls 라스트 안의 공들과 내 공의 출동 확인
       for (let ball of balls) {
         // 내가 직접 공 위치 바꾸면 안됌2(수정예정)
@@ -307,7 +308,7 @@ function App() {
             console.log("collision");
 
             // 내가 폭탄일 경우, 상대방한테 넘겨줌
-            if (curPlayerClone.bomb && curPlayerClone !== undefined && balls.length > 1) {
+            if (curPlayerClone.bomb && curPlayerClone !== undefined && balls.length > 1 && !bombChangeHappend) {
               bombChange(curPlayerClone.id, otherPlayerClone.id);
 
               // 부딕친 상대 공을 튕겨 나가게 해줌.
@@ -315,16 +316,16 @@ function App() {
               otherPlayerClone.y += xySpeed[1] * 60; 
 
               let adjustedBallPosition1: number[] = isWallCollision(otherPlayerClone, canvasHeight, canvasWidth, ballRad);
-
               otherPlayerClone.x = adjustedBallPosition1[0];
               otherPlayerClone.y = adjustedBallPosition1[1];
 
               sendData(otherPlayerClone);
+
+              bombChangeHappend = true;
             } 
 
             // 충돌 후 내 공 위치 조정
             let adjustedBallPosition3: number[] = adjustBallPosition(curPlayer, otherPlayerClone, xySpeed, ballRad);
-            
             curPlayerClone.x += adjustedBallPosition3[0];
             curPlayerClone.y += adjustedBallPosition3[1];
           }
@@ -332,10 +333,14 @@ function App() {
       }
       // 벽 충돌 체크 후 tempSpeed를 업데이트
       let adjustedBallPosition2: number[] = isWallCollision(curPlayerClone, canvasHeight, canvasWidth, ballRad);
-
       curPlayerClone.x = adjustedBallPosition2[0];
       curPlayerClone.y = adjustedBallPosition2[1];
-    } 
+
+    } else if (joystickData.state === "stop") {
+      if (curPlayerClone.bomb && curPlayerClone !== undefined && balls.length > 1) {
+
+      }
+    }
 
     if (curPlayerClone !== undefined) {
       sendData(curPlayerClone);
