@@ -8,6 +8,7 @@ import adjustBallPosition from './adjustPosition';
 import bombImage from './image/bomb.png'
 import backgroundImage from './image/gameBackground.jpg'
 import backgroundImage2 from './image/gameBackground2.jpg'
+import explosionImage from './image/explosion.png'
 
 /* ================== 조이스틱 관련 시작 ================== */
 type JoystickDirection = "FORWARD" | "RIGHT" | "LEFT" | "BACKWARD";
@@ -49,6 +50,9 @@ bomb.src = bombImage;
 
 const gameBackground = new Image();
 gameBackground.src = backgroundImage2;
+
+const explosion = new Image();
+explosion.src = explosionImage;
 
 /* ================== 이미지 관련 끝 ================== */
 
@@ -96,7 +100,6 @@ const bombMoveSpeed = 3; // 폭탄은 유저보다 빠르게
 const balls: playerBallType[] = [];
 const ballMap: Record<string, playerBall> = {};
 let myId: string;
-let gameEnd = false;
 
 
 
@@ -226,25 +229,29 @@ function bombChange(ballId1: string, ballId2: string) {
 const playTime = 30;
 let progressBarHeight = 0;
 let gameTime = 0;
+let gameEnded = false;
 
 function gameStart() {
   let data = true;
   socket.emit("game_start", data)
+
+  gameEnded = false;
   
   progressBarHeight = 0;
   gameTime = 0;
   let timer = setInterval(function() {
     gameTime += 0.1;
     progressBarHeight += 1.666666667;
-    console.log(gameTime);
     if (gameTime >= playTime) {
       clearInterval(timer);
     }
   }, 100)
 }
 
-function gameFinished(loser: string, color: string) {
 
+
+function gameFinished(loser: string, color: string) {
+  gameEnded = true;
 }
 
 
@@ -260,7 +267,10 @@ function ClearCanvas(ctx: any, canvas: any) {
 
 /* ================== 게임 외적 함수 시작 ================== */
 
-
+function shakeGenerator(amplitude: number) {
+  let shakeArr:number[] = [Math.random() * amplitude, Math.random() * amplitude]
+  return shakeArr;
+}
 
 
 /* ================== 게임 외적 함수 끝 ================== */
@@ -268,6 +278,7 @@ function ClearCanvas(ctx: any, canvas: any) {
 function App() {
   //canvas 사용을 위해 필요한 선언 1
   const canvasRef: any = useRef(null);
+  let frameCnt = 0;
 
   const render = () => {
     //canvas 사용을 위해 필요한 선언 2
@@ -278,7 +289,18 @@ function App() {
 
     ClearCanvas(ctx, canvas);
 
-    ctx.drawImage(gameBackground, 0, 0, 360, 500);
+    ctx.save();
+    if (gameEnded) {
+      if (frameCnt > 360) {
+        ctx.translate(0,0);
+      } else {
+        const shake = shakeGenerator(10);
+        ctx.translate(shake[0], shake[1]);
+        frameCnt += 1;
+      }
+    }
+    
+    ctx.drawImage(gameBackground, -10, -10, 380, 520);
     
     // 공들 출력
     ctx.save();
@@ -309,6 +331,11 @@ function App() {
     ctx.stroke()
     ctx.restore();
 
+    if (gameEnded) {
+      ctx.drawImage(explosion, 0, 70, 360, 360);
+    }
+
+    ctx.restore();
     /*==== 캔버스 요소 조작 끝 ====*/
 
     //canvas에 애니메이션이 작동하게 하는 함수. 
