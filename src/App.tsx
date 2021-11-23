@@ -67,8 +67,8 @@ class playerBall {
   constructor() {
     this.id = "";
     this.color = "#FF00FF";
-    this.x = 360/2;
-    this.y = 500/2;
+    this.x = 360 / 2;
+    this.y = 500 / 2;
     this.bomb = false;
   }
 }
@@ -103,7 +103,7 @@ let myId: string;
 
 
 
-function joinUser(id: string, color: string, x: number, y: number, bomb: boolean){
+function joinUser(id: string, color: string, x: number, y: number, bomb: boolean) {
   console.log("join user");
   let ball = new playerBall();
   ball.id = id;
@@ -118,20 +118,20 @@ function joinUser(id: string, color: string, x: number, y: number, bomb: boolean
   return ball;
 }
 
-function leaveUser(id: string){
-  for(var i = 0 ; i < balls.length; i++){
-      if(balls[i].id === id){
-          balls.splice(i,1);
-          break;
-      }
+function leaveUser(id: string) {
+  for (var i = 0; i < balls.length; i++) {
+    if (balls[i].id === id) {
+      balls.splice(i, 1);
+      break;
+    }
   }
   delete ballMap[id];
 }
 
-function updateState(id: string, x: number, y: number, bomb: boolean){
-  
-  for(let i = 0 ; i < balls.length; i++){
-    if(balls[i].id === id) {
+function updateState(id: string, x: number, y: number, bomb: boolean) {
+
+  for (let i = 0; i < balls.length; i++) {
+    if (balls[i].id === id) {
       balls[i].x = x;
       balls[i].y = y;
       balls[i].bomb = bomb;
@@ -140,21 +140,21 @@ function updateState(id: string, x: number, y: number, bomb: boolean){
   }
 
   let ball = ballMap[id];
-  if(!ball){
-      return;
+  if (!ball) {
+    return;
   }
   ball.x = x;
   ball.y = y;
   ball.bomb = bomb;
 }
 
-function updateBomb(sid: string, sbomb: boolean, rid: string, rbomb: boolean){
-  for(let i = 0 ; i < balls.length; i++){
-    if(balls[i].id === sid) {
+function updateBomb(sid: string, sbomb: boolean, rid: string, rbomb: boolean) {
+  for (let i = 0; i < balls.length; i++) {
+    if (balls[i].id === sid) {
       balls[i].bomb = sbomb;
       break;
     }
-    if(balls[i].id === rid) {
+    if (balls[i].id === rid) {
       balls[i].bomb = rbomb;
       break;
     }
@@ -163,11 +163,18 @@ function updateBomb(sid: string, sbomb: boolean, rid: string, rbomb: boolean){
   let sball = ballMap[sid];
   let rball = ballMap[rid];
 
-  if(!sball){ return; }
-  if(!rball){ return; }
+  if (!sball) { return; }
+  if (!rball) { return; }
 
   sball.bomb = sbomb;
   rball.bomb = rbomb;
+
+  // 내가 폭탄일 경우 5초간 조작 금지.
+  if (rid === myId) {
+    bombChangeHappend = true;
+    setTimeout(function () { bombChangeHappend = false; }, 1500)
+  }
+
 
   //클라이언트 사이드에서 생긴 변경사항을 서버에 다시 보내서 정확한 데이터를 돌려 받게함
   // sendData(sball);
@@ -180,27 +187,27 @@ function updateBomb(sid: string, sbomb: boolean, rid: string, rbomb: boolean){
 /* ================== 서버 관련 시작 ================== */
 const socket = io();
 
-socket.on('user_id', function(data){
+socket.on('user_id', function (data) {
   myId = data;
 });
 
-socket.on('join_user', function(data){
+socket.on('join_user', function (data) {
   joinUser(data.id, data.color, data.x, data.y, data.bomb);
 });
 
-socket.on('leave_user', function(data){
+socket.on('leave_user', function (data) {
   leaveUser(data);
 });
 
-socket.on('update_state', function(data){
+socket.on('update_state', function (data) {
   updateState(data.id, data.x, data.y, data.bomb);
 });
 
-socket.on('update_bomb', function(data){
+socket.on('update_bomb', function (data) {
   updateBomb(data.sid, data.sbomb, data.rid, data.rbomb);
 });
 
-socket.on('game_end', function(data){
+socket.on('game_end', function (data) {
   gameFinished(data.loser, data.color);
 });
 
@@ -210,8 +217,8 @@ function sendData(Player: playerBallType) {
     x: Player.x,
     y: Player.y,
   }
-  if(data){
-      socket.emit("send_location", data);
+  if (data) {
+    socket.emit("send_location", data);
   }
 }
 
@@ -230,16 +237,17 @@ const playTime = 30;
 let progressBarHeight = 0;
 let gameTime = 0;
 let gameEnded = false;
+let bombChangeHappend = false;
 
 function gameStart() {
   let data = true;
   socket.emit("game_start", data)
 
   gameEnded = false;
-  
+
   progressBarHeight = 0;
   gameTime = 0;
-  let timer = setInterval(function() {
+  let timer = setInterval(function () {
     gameTime += 0.1;
     progressBarHeight += 1.666666667;
     if (gameTime >= playTime) {
@@ -268,7 +276,7 @@ function ClearCanvas(ctx: any, canvas: any) {
 /* ================== 게임 외적 함수 시작 ================== */
 
 function shakeGenerator(amplitude: number) {
-  let shakeArr:number[] = [Math.random() * amplitude, Math.random() * amplitude]
+  let shakeArr: number[] = [Math.random() * amplitude, Math.random() * amplitude]
   return shakeArr;
 }
 
@@ -292,21 +300,21 @@ function App() {
     ctx.save();
     if (gameEnded) {
       if (frameCnt > 360) {
-        ctx.translate(0,0);
+        ctx.translate(0, 0);
       } else {
         const shake = shakeGenerator(10);
         ctx.translate(shake[0], shake[1]);
         frameCnt += 1;
       }
     }
-    
+
     ctx.drawImage(gameBackground, -10, -10, 380, 520);
-    
+
     // 공들 출력
     ctx.save();
     for (let i = 0; i < balls.length; i++) {
       let ball = balls[i];
-      
+
       ctx.fillStyle = ball.color;
       ctx.beginPath();
       ctx.arc(ball.x, ball.y, ballRad, 0, 2 * Math.PI);
@@ -314,12 +322,12 @@ function App() {
       ctx.stroke();
 
       if (ball.bomb === true) {
-        ctx.drawImage(bomb, ball.x - ballRad - 15, ball.y- ballRad - 14, 57, 57);
+        ctx.drawImage(bomb, ball.x - ballRad - 15, ball.y - ballRad - 14, 57, 57);
       }
-      
+
       ctx.beginPath();
       ctx.font = '15px Arial';
-      ctx.fillText(`player ${i}`,ball.x - ballRad - 7, ball.y - ballRad - 4);
+      ctx.fillText(`player ${i}`, ball.x - ballRad - 7, ball.y - ballRad - 4);
       ctx.closePath();
     }
     ctx.restore();
@@ -348,78 +356,83 @@ function App() {
     const curPlayer = ballMap[myId];
     const curPlayerClone: playerBallType = JSON.parse(JSON.stringify(curPlayer));
 
-    if (joystickData.state === "move"){
-      let xySpeed: number[] = [joystickData.moveX, joystickData.moveY];
+    if (!bombChangeHappend) {
+      if (joystickData.state === "move" && !bombChangeHappend) {
+        let xySpeed: number[] = [joystickData.moveX, joystickData.moveY];
 
-      // 조이스틱 이동 값에 따라 공 이동
-      if (curPlayerClone.bomb) {
-        curPlayerClone.x += xySpeed[0] * bombMoveSpeed;
-        curPlayerClone.y += xySpeed[1] * bombMoveSpeed;
-      } else {
-        curPlayerClone.x += xySpeed[0] * ballMoveSpeed;
-        curPlayerClone.y += xySpeed[1] * ballMoveSpeed;
-      }
-      
-      let bombChangeHappend = false;
+        // 조이스틱 이동 값에 따라 공 이동
+        if (curPlayerClone.bomb) {
+          curPlayerClone.x += xySpeed[0] * bombMoveSpeed;
+          curPlayerClone.y += xySpeed[1] * bombMoveSpeed;
+        } else {
+          curPlayerClone.x += xySpeed[0] * ballMoveSpeed;
+          curPlayerClone.y += xySpeed[1] * ballMoveSpeed;
+        }
 
-      // balls 라스트 안의 공들과 내 공의 출동 확인
-      for (let ball of balls) {
-        // 내가 직접 공 위치 바꾸면 안됌2(수정예정)
-        const otherPlayerClone = JSON.parse(JSON.stringify(ball));
-        
+        let bombChangeHappend = false;
 
-        if (curPlayerClone.id !== otherPlayerClone.id) {
-          const collision: boolean = isBallCollision(curPlayerClone, otherPlayerClone, ballRad);
+        // balls 라스트 안의 공들과 내 공의 출동 확인
+        for (let ball of balls) {
+          // 내가 직접 공 위치 바꾸면 안됌2(수정예정)
+          const otherPlayerClone = JSON.parse(JSON.stringify(ball));
 
-          // 충돌했을때
-          if (collision) {
-            console.log("collision");
 
-            // 내가 폭탄일 경우, 상대방한테 넘겨줌
-            if (curPlayerClone.bomb && curPlayerClone !== undefined && balls.length > 1 && !bombChangeHappend) {
-              bombChange(curPlayerClone.id, otherPlayerClone.id);
+          if (curPlayerClone.id !== otherPlayerClone.id) {
+            const collision: boolean = isBallCollision(curPlayerClone, otherPlayerClone, ballRad);
 
-              // 부딕친 상대 공을 튕겨 나가게 해줌.
-              otherPlayerClone.x += xySpeed[0] * 60;
-              otherPlayerClone.y += xySpeed[1] * 60; 
+            // 충돌했을때
+            if (collision) {
+              console.log("collision");
 
-              let adjustedBallPosition1: number[] = isWallCollision(otherPlayerClone, canvasHeight, canvasWidth, ballRad);
-              otherPlayerClone.x = adjustedBallPosition1[0];
-              otherPlayerClone.y = adjustedBallPosition1[1];
+              // 내가 폭탄일 경우, 상대방한테 넘겨줌
+              if (curPlayerClone.bomb && curPlayerClone !== undefined && balls.length > 1 && !bombChangeHappend) {
+                bombChange(curPlayerClone.id, otherPlayerClone.id);
 
-              sendData(otherPlayerClone);
+                // 부딕친 상대 공을 튕겨 나가게 해줌.
+                // otherPlayerClone.x += xySpeed[0] * 60;
+                // otherPlayerClone.y += xySpeed[1] * 60; 
 
-              bombChangeHappend = true;
-            } 
+                // let adjustedBallPosition1: number[] = isWallCollision(otherPlayerClone, canvasHeight, canvasWidth, ballRad);
+                // otherPlayerClone.x = adjustedBallPosition1[0];
+                // otherPlayerClone.y = adjustedBallPosition1[1];
 
-            // 충돌 후 내 공 위치 조정
-            let adjustedBallPosition3: number[] = adjustBallPosition(curPlayer, otherPlayerClone, xySpeed, ballRad);
-            curPlayerClone.x += adjustedBallPosition3[0];
-            curPlayerClone.y += adjustedBallPosition3[1];
+                // sendData(otherPlayerClone);
+
+                bombChangeHappend = true;
+              }
+
+              // 충돌 후 내 공 위치 조정
+              let adjustedBallPosition3: number[] = adjustBallPosition(curPlayer, otherPlayerClone, xySpeed, ballRad);
+              curPlayerClone.x += adjustedBallPosition3[0];
+              curPlayerClone.y += adjustedBallPosition3[1];
+            }
           }
         }
-      }
-      // 벽 충돌 체크 후 tempSpeed를 업데이트
-      let adjustedBallPosition2: number[] = isWallCollision(curPlayerClone, canvasHeight, canvasWidth, ballRad);
-      curPlayerClone.x = adjustedBallPosition2[0];
-      curPlayerClone.y = adjustedBallPosition2[1];
+        // 벽 충돌 체크 후 tempSpeed를 업데이트
+        let adjustedBallPosition2: number[] = isWallCollision(curPlayerClone, canvasHeight, canvasWidth, ballRad);
+        curPlayerClone.x = adjustedBallPosition2[0];
+        curPlayerClone.y = adjustedBallPosition2[1];
 
-    } else if (joystickData.state === "stop") {
-      if (curPlayerClone.bomb && curPlayerClone !== undefined && balls.length > 1) {
+      } else if (joystickData.state === "stop") {
+        if (curPlayerClone.bomb && curPlayerClone !== undefined && balls.length > 1) {
 
+        }
       }
+
+      if (curPlayerClone !== undefined) {
+        sendData(curPlayerClone);
+      }
+    } else {
+
     }
 
-    if (curPlayerClone !== undefined) {
-      sendData(curPlayerClone);
-    }
-    
+
     /*==== 데이터 조작 후 서버 전송 ====*/
   };
 
   useEffect(() => {
     render();
-    setInterval(handleGameEvents, 20);
+    setInterval(handleGameEvents, 30);
   });
 
 
@@ -433,17 +446,17 @@ function App() {
           width={canvasWidth} />
       </div>
       <div className="joystick">
-        <Joystick 
-          size={100} 
-          baseColor="lightgray" 
-          stickColor="gray" 
-          move={handleMove} 
+        <Joystick
+          size={100}
+          baseColor="lightgray"
+          stickColor="gray"
+          move={handleMove}
           stop={handleStop}
           throttle={120}
         >
         </Joystick>
       </div>
-      <button onClick={() => {gameStart();}}>
+      <button onClick={() => { gameStart(); }}>
         게임 시작
       </button>
     </div>
