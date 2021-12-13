@@ -1,7 +1,14 @@
 # sw정글 2기 나만의 무기 갖기 - 팀 프로젝트
 
+프로젝트에 이식 전 프로토타입입니다! 
+
 ## 실시간 멀티플레이어 폭탄 돌리기 게임 
 영문 가제: Hot Bomb Potato
+
+완성본은 
+https://github.com/GALLI-HALLI/superSlap
+에 폭탄 넘기기로 이식됌.
+
 
 참고 링크:
 
